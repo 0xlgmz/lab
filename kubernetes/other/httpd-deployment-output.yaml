@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: http-deployment-output
+  name: http-deployment-output
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: http-deployment-output
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: http-deployment-output
+    spec:
+      containers:
+      - image: httpd
+        name: httpd
+        resources: {}
+status: {}

@@ -1,0 +1,6 @@
+environment = "dev"
+aws_region = ""
+managed = ""
+application_name = ""
+owner = ""
+repo = ""
