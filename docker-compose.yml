@@ -1,0 +1,411 @@
+# version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: thefoodcove_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: thefoodcove
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: thefoodcove_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: thefoodcove_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: thefoodcove_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./backend-micro/api-gateway
+      dockerfile: Dockerfile
+    container_name: thefoodcove_api_gateway
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - BUSINESS_SERVICE_URL=http://business-service:8080
+      - INVENTORY_SERVICE_URL=http://inventory-service:8080
+      - TRANSACTION_SERVICE_URL=http://transaction-service:8080
+      - FILE_SERVICE_URL=http://file-service:8080
+      - MENU_SERVICE_URL=http://menu-service:8080
+      - ORDER_SERVICE_URL=http://order-service:8080
+      - TABLE_SERVICE_URL=http://table-service:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: ./backend-micro/auth-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_auth_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  business-service:
+    build:
+      context: ./backend-micro/business-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_business_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  inventory-service:
+    build:
+      context: ./backend-micro/inventory-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_inventory_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8083:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  transaction-service:
+    build:
+      context: ./backend-micro/transaction-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_transaction_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8084:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  file-service:
+    build:
+      context: ./backend-micro/file-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_file_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8085:8080"
+    volumes:
+      - file_uploads:/app/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  menu-service:
+    build:
+      context: ./backend-micro/menu-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_menu_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8086:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  order-service:
+    build:
+      context: ./backend-micro/order-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_order_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8087:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  table-service:
+    build:
+      context: ./backend-micro/table-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_table_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8088:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  search-service:
+    build:
+      context: ./backend-micro/search-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_search_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8089:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  payment-service:
+    build:
+      context: ./backend-micro/payment-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_payment_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  notification-service:
+    build:
+      context: ./backend-micro/notification-service
+      dockerfile: Dockerfile
+    container_name: thefoodcove_notification_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=thefoodcove
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8091:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana-storage:
+  file_uploads: 

@@ -1,0 +1,93 @@
+# version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: 0xlgzlab_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: 0xlgzlab
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: thefoodcove_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./backend-micro/api-gateway
+      dockerfile: Dockerfile
+    container_name: 0xlgzlab_api_gateway
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - BUSINESS_SERVICE_URL=http://business-service:8080
+      - INVENTORY_SERVICE_URL=http://inventory-service:8080
+      - TRANSACTION_SERVICE_URL=http://transaction-service:8080
+      - FILE_SERVICE_URL=http://file-service:8080
+      - MENU_SERVICE_URL=http://menu-service:8080
+      - ORDER_SERVICE_URL=http://order-service:8080
+      - TABLE_SERVICE_URL=http://table-service:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: ./backend-micro/auth-service
+      dockerfile: Dockerfile
+    container_name: 0xlgzlab_auth_service
+    environment:
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=0xlgzlab
+      - ENABLE_METRICS=true
+      - METRICS_AUTH=false
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
