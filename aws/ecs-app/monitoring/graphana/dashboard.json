@@ -1,0 +1,39 @@
+{
+  ,
+  "refresh": "10s"
+}
+}
+
+  "dashboard": {
+"id": null,
+"title": "ECS Service Monitoring",
+"timezone": "browser",
+"panels": [
+  {
+    "type": "graph",
+    "title": "ECS CPU Usage",
+    "id": 1,
+    "targets": [
+      {
+        "expr": "rate(container_cpu_usage_seconds_total{container!=\"\", image!=\"\"}[5m]) * 100",
+        "legendFormat": "{{ container }}",
+        "refId": "A"
+      }
+    ],
+    "datasource": "Prometheus",
+    "yaxes": [
+      {
+        "format": "percent",
+        "label": "CPU %",
+        "logBase": 1,
+        "min": 0,
+        "max": 100
+      },
+      {
+        "show": false
+      }
+    ]
+  }
+],
+"schemaVersion": 32,
+"version": 1

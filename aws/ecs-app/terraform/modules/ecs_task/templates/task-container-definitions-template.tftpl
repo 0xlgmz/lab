@@ -1,0 +1,35 @@
+[
+  {
+    "name": "${service_name}",
+    "image": "${docker_image_url}",
+    "essential": true,
+    "portMappings": [
+      {
+        "hostPort": ${container_port},
+        "protocol": "tcp",
+        "containerPort": ${container_port}
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "${cloudwatch_log_group}",
+          "awslogs-region": "${cloudwatch_log_region}",
+          "awslogs-stream-prefix": "${service_name}"
+        }
+    },
+    "cpu": ${cpu},
+    "memoryReservation": ${memory_reservation},
+    "environment": ${environment},
+    "mountPoints": [],
+    "ulimits": [
+      {
+        "name": "nofile",
+        "softLimit": 8182,
+        "hardLimit": 16264
+      }
+    ],
+    "systemControls": [],
+    "volumesFrom": []
+  }
+]

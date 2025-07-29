@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: S3 bucket with versioning enabled
+
+Resources:
+  MyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my-devops-demo-bucket
+      VersioningConfiguration:
+        Status: Enabled
+
+Outputs:
+  BucketName:
+    Value: !Ref MyS3Bucket
+    Description: Name of the created S3 bucket
+
