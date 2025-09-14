@@ -1,0 +1,67 @@
+theme:
+  background-color: 232 23 18
+  contrast-multiplier: 1.2
+  primary-color: 220 83 75
+  positive-color: 105 48 72
+  negative-color: 351 74 73
+
+pages:
+  - name: Home
+    # Optionally, if you only have a single page you can hide the desktop navigation for a cleaner look
+    # hide-desktop-navigation: true
+    columns:
+      - size: small
+        widgets:
+          - type: calendar
+            first-day-of-week: monday
+
+          - type: twitch-channels
+            channels:
+              - theprimeagen
+              - teej_dv
+              - lirik
+              - elajjaz
+              - awsonair
+
+      - size: full
+        widgets:
+          - type: monitor
+            cache: 1m
+            title: Services
+            preview: compact
+            sites:
+              - title: PGAdmin
+                url: http://192.168.4.52:30200
+
+          - type: group
+            widgets:
+              - type: reddit
+                subreddit: technology
+                show-thumbnails: true
+              - type: reddit
+                subreddit: selfhosted
+                show-thumbnails: true
+              - type: reddit
+                subreddit: mechanicalkeyboards
+                show-thumbnails: true
+              - type: reddit
+                subreddit: mechmarket
+                show-thumbnails: true
+
+      - size: small
+        widgets:
+          - type: weather
+            location: Gibraltar
+            units: metric # alternatively "imperial"
+            hour-format: 12h # alternatively "24h"
+            # Optionally hide the location from being displayed in the widget
+            # hide-location: true
+
+          - type: releases
+            cache: 1d
+            # Without authentication the Github API allows for up to 60 requests per hour. You can create a
+            # read-only token from your Github account settings and use it here to increase the limit.
+            # token: ...
+            repositories:
+              - glanceapp/glance
+

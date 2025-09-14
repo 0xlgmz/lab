@@ -1,0 +1,103 @@
+# ----------------------------
+# Persistent Volume
+# ----------------------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-volume
+  labels:
+    type: local
+    app: postgres
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: /Users/lgomez/mnt/data
+---
+# ----------------------------
+# Persistent Volume Claim
+# ----------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-volume-claim
+  labels:
+    app: postgres
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+---
+# ----------------------------
+# Secret for PostgreSQL credentials
+# ----------------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  labels:
+    app: postgres
+type: Opaque
+stringData:
+  POSTGRES_DB: ps_db
+  POSTGRES_USER: ps_user
+  POSTGRES_PASSWORD: SecurePassword
+---
+# ----------------------------
+# PostgreSQL Deployment
+# ----------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:14
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          volumeMounts:
+            - name: postgresdata
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata   # <--- Use a subdirectory to avoid permission issues
+      volumes:
+        - name: postgresdata
+          persistentVolumeClaim:
+            claimName: postgres-volume-claim
+---
+# ----------------------------
+# Service
+# ----------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  type: NodePort
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres
+
