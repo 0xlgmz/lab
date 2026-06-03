@@ -32,6 +32,10 @@ pages:
             sites:
               - title: PGAdmin
                 url: http://192.168.4.52:30200
+              - title: PiHole
+                url: http://192.168.4.52:30693/admin
+              - title: n8n
+                url: http://google.com
 
           - type: group
             widgets:
